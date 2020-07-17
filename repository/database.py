@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import scoped_session, sessionmaker, relationship
+from sqlalchemy.orm import scoped_session, sessionmaker, relationship, backref
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, Text, func, String, Float
 import application.conf as cfg
 
@@ -15,7 +15,7 @@ class Patient(Base):
     id = Column(Integer, primary_key=True)
     name = Column(Text)
     email = Column(Text)
-    username = Column(String(255))
+    username = Column(Text)
     mobile = Column(Text)
     claims = relationship('Claim', backref='patient')
 
@@ -27,4 +27,5 @@ class Claim(Base):
     submission_date = Column(DateTime)
     total_value = Column(Float)
     file_name = Column(Text)
-    patient_id = Column(Integer, ForeignKey('patient.id'))
+    patient_id = Column(Integer, ForeignKey('patient.id'), nullable=False)
+    # patient = relationship('Patient', backref='claim')

@@ -1,12 +1,13 @@
 import graphene
+from celery.utils.serialization import jsonify
 from graphene import relay
 from graphene_sqlalchemy import SQLAlchemyConnectionField, SQLAlchemyObjectType
 from repository.database import db_session
 from repository.database import Patient as PatientModel
 from repository.database import Claim as ClaimModel
-from sqlalchemy import and_
-from io import IOBase
+from sqlalchemy import and_, select
 from graphene_file_upload.scalars import Upload
+import service_ops.tasks as tasks
 
 
 class Patient(SQLAlchemyObjectType):
@@ -14,10 +15,12 @@ class Patient(SQLAlchemyObjectType):
         model = PatientModel
         interfaces = (relay.Node, )
 
+
 class Claim(SQLAlchemyObjectType):
     class Meta:
         model = ClaimModel
         interfaces = (relay.Node, )
+
 
 class createPatient(graphene.Mutation):
     class Arguments:
@@ -38,6 +41,7 @@ class createPatient(graphene.Mutation):
         ok = True
         return createPatient(patient=patient, ok=ok)
 
+
 class createClaim(graphene.Mutation):
     class Arguments:
         reason = graphene.String()
@@ -54,8 +58,10 @@ class createClaim(graphene.Mutation):
                                   total_value=args.get("total_value"), file_name=claim_file.filename)
         patient = PatientModel.query.filter_by(username=args.get("username")).first()
         if patient is not None:
+            claim_object.patient_id = patient.id
             claim_object.patient = patient
-        claim_file.save(dst=claim_file.filename)
+        # claim_file.save(dst=claim_file.filename)
+        tasks.save_file.delay(claim_file.read(), claim_file.filename, claim_file.name, claim_file.content_length, claim_file.content_type, claim_file.headers)
         db_session.add(claim_object)
         db_session.commit()
         ok = True
@@ -68,9 +74,9 @@ class Query(graphene.ObjectType):
     claim = SQLAlchemyConnectionField(Claim)
     all_patients = SQLAlchemyConnectionField(Patient)
     all_claims = SQLAlchemyConnectionField(Claim)
-    find_patient = graphene.Field(lambda: Patient, username=graphene.String())
+    find_patient_claim = graphene.Field(lambda: Patient, username=graphene.String())
 
-    def resolve_find_patient(self, info, **args):
+    def resolve_find_patient_claim(self, info, **args):
         query = Patient.get_query(info)
         username = args.get('username')
         # you can also use and_ with filter() eg: filter(and_(param1, param2)).first()
@@ -80,32 +86,6 @@ class Query(graphene.ObjectType):
 class MyMutations(graphene.ObjectType):
     create_patient = createPatient.Field()
     create_claim = createClaim.Field()
-    # change_username = changeUsername.Field()
 
 
 schema = graphene.Schema(query=Query, mutation=MyMutations, types=[Patient, Claim, Upload])
-
-# class Upload(graphene.Scalar):
-#     def serialize(self):
-#         pass
-
-# Used to Change Username with Email
-# class changeUsername(graphene.Mutation):
-# 	class Input:
-# 		username = graphene.String()
-# 		email = graphene.String()
-#
-# 	ok = graphene.Boolean()
-# 	user = graphene.Field(Users)
-#
-# 	@classmethod
-# 	def mutate(cls, _, args, context, info):
-# 		query = Users.get_query(context)
-# 		email = args.get('email')
-# 		username = args.get('username')
-# 		user = query.filter(PatientModel.email == email).first()
-# 		user.username = username
-# 		db_session.commit()
-# 		ok = True
-#
-# 		return changeUsername(user=user, ok = ok)

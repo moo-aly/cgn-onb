@@ -1,3 +1,6 @@
+DROP TABLE IF EXISTS patient;
+DROP TABLE IF EXISTS claim;
+
 create table patient(
 	id INTEGER primary key autoincrement,
 	name text,
@@ -13,5 +16,5 @@ create table claim(
 	total_value float,
 	file_name text,
 	patient_id integer,
-	FOREIGN KEY(patient_id) REFERENCES patient(id)
+	CONSTRAINT patient_id_fk FOREIGN KEY(patient_id) REFERENCES patient(id)
 );

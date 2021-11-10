@@ -23,7 +23,7 @@ Go to http://localhost:5000/graphql to try GraphQL.
 ### Adding a New Patient
 ```
 mutation {
-  createPatient(name: "hammad", email: "hammad@abc.com", username: "hammad", mobile: "01150802020") {
+  createPatient(name: "hammad", email: "hammad@abc.com", username: "hammad", mobile: "7418529632") {
     patient {
         id
         name
